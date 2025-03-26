@@ -52,4 +52,16 @@ private:
 	int spawnUnitCount = 0;
 
 	Mix_Chunk* mix_ChunkSpawnUnit = nullptr;
+private:
+    int baseHealth;
+    int baseMaxHealth;
+
+public:
+    void damageBase(int damage);
+    void resetBase();
+    bool isBaseDestroyed();
+private:
+    Vector2D basePosition;
+    bool running;
+
 };

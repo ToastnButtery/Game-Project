@@ -14,6 +14,10 @@ public:
 	float angle() { return atan2(y, x); }
 
 	float magnitude() { return sqrt(x * x + y * y); }
+	float distanceTo(const Vector2D& other) const {
+    return sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
+}
+
 	Vector2D normalize();
 	Vector2D getNegativeReciprocal() { return Vector2D(-y, x); }
 

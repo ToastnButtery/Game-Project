@@ -1,4 +1,5 @@
 #include "Game.h"
+#include <iostream>
 
 
 
@@ -6,6 +7,10 @@ Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int wind
     placementModeCurrent(PlacementMode::wall),
     level(renderer, windowWidth / tileSize, windowHeight / tileSize),
     spawnTimer(0.25f), roundTimer(5.0f) {
+        baseMaxHealth = 20;  // Căn cứ có 20 máu ban đầu
+baseHealth = baseMaxHealth;
+basePosition = Vector2D(windowWidth / (2 * tileSize), windowHeight / (2 * tileSize)); // Tâm màn hình
+
 
 
     if (window != nullptr && renderer != nullptr) {
@@ -94,6 +99,14 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
             case SDL_SCANCODE_H:
                 overlayVisible = !overlayVisible;
                 break;
+                case SDL_SCANCODE_R:
+    resetBase();
+    listUnits.clear();
+    listTurrets.clear();
+    listProjectiles.clear();
+    std::cout << "Game restarted!" << std::endl;
+    break;
+
             }
         }
     }
@@ -157,6 +170,16 @@ void Game::updateUnits(float dT) {
 
         if ((*it) != nullptr) {
             (*it)->update(dT, level, listUnits);
+            Vector2D enemyPos = (*it)->getPos();
+if (enemyPos.distanceTo(basePosition) < 0.5f) {  // Nếu kẻ địch đến gần căn cứ
+    baseHealth--;  // Giảm 1 máu căn cứ
+    if (baseHealth <= 0) {
+        std::cout << "Base Destroyed! Game Over!" << std::endl;
+        running = false;  // Dừng game
+    }
+    it = listUnits.erase(it);
+    increment = false;
+}
 
 
             if ((*it)->isAlive() == false) {
@@ -242,7 +265,16 @@ void Game::draw(SDL_Renderer* renderer) {
         SDL_Rect rect = { 40, 40, w, h };
         SDL_RenderCopy(renderer, textureOverlay, NULL, &rect);
     }
+    SDL_Rect healthBarBackground = {40, 10, 200, 20};  // Nền thanh máu
+SDL_Rect healthBar = {40, 10, (int)(200 * ((float)baseHealth / 10)), 20};  // Thanh máu thực tế
 
+// Vẽ nền (màu đỏ - thể hiện mất máu)
+SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+SDL_RenderFillRect(renderer, &healthBarBackground);
+
+// Vẽ thanh máu còn lại (màu xanh)
+SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+SDL_RenderFillRect(renderer, &healthBar);
 
     SDL_RenderPresent(renderer);
 }
@@ -268,4 +300,10 @@ void Game::removeTurretsAtMousePosition(Vector2D posMouse) {
         else
             it++;
     }
+
+
+}
+void Game::resetBase() {
+    baseHealth = baseMaxHealth;  // Khôi phục máu căn cứ về giá trị ban đầu
+    std::cout << "Base reset! Health restored to " << baseHealth << std::endl;
 }
