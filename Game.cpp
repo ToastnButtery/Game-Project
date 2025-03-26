@@ -7,7 +7,7 @@ Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int wind
     placementModeCurrent(PlacementMode::wall),
     level(renderer, windowWidth / tileSize, windowHeight / tileSize),
     spawnTimer(0.25f), roundTimer(5.0f) {
-        baseMaxHealth = 20;  // Căn cứ có 20 máu ban đầu
+        baseMaxHealth = 10;  // Căn cứ có 20 máu ban đầu
 baseHealth = baseMaxHealth;
 basePosition = Vector2D(windowWidth / (2 * tileSize), windowHeight / (2 * tileSize)); // Tâm màn hình
 
