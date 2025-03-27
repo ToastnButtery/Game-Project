@@ -1,5 +1,6 @@
 #include "Game.h"
 #include <iostream>
+#include <string>
 
 
 
@@ -7,7 +8,19 @@ Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int wind
     placementModeCurrent(PlacementMode::wall),
     level(renderer, windowWidth / tileSize, windowHeight / tileSize),
     spawnTimer(0.25f), roundTimer(5.0f) {
-        baseMaxHealth = 10;  // Căn cứ có 20 máu ban đầu
+
+        if(TTF_Init()==-1){
+            std::cerr<<"Failed to initialize SDL_TTF: " <<TTF_GetError()<<std::endl;
+        }
+
+        startTime=SDL_GetTicks();
+
+        TTF_Init();
+        font=TTF_OpenFont("Data/Fonts/fast99.ttf", 24);
+        if(!font) std::cerr<<"Failed to load fonts : "<<TTF_GetError()<<std::endl;
+
+
+        baseMaxHealth = 10;
 baseHealth = baseMaxHealth;
 basePosition = Vector2D(windowWidth / (2 * tileSize), windowHeight / (2 * tileSize)); // Tâm màn hình
 
@@ -54,6 +67,12 @@ Game::~Game() {
 
     TextureLoader::deallocateTextures();
     SoundLoader::deallocateSounds();
+
+    if(font){
+        TTF_CloseFont(font);
+        font = nullptr;
+    }
+    TTF_Quit();
 }
 
 
@@ -275,6 +294,22 @@ SDL_RenderFillRect(renderer, &healthBarBackground);
 // Vẽ thanh máu còn lại (màu xanh)
 SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
 SDL_RenderFillRect(renderer, &healthBar);
+
+Uint32 elapsedTime = (SDL_GetTicks() - startTime)/1000;
+std::string timeText ="Time survived: "+ std::to_string(elapsedTime) + " s";
+
+SDL_Color textColor = {255, 255, 255, 255};
+
+SDL_Surface* textSurface =TTF_RenderText_Solid(font, timeText.c_str(), textColor);
+if( textSurface){
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+
+    SDL_Rect textRect = {40, 40, textSurface->w, textSurface->h};
+    SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
+
+    SDL_FreeSurface(textSurface);
+    SDL_DestroyTexture(textTexture);
+}
 
     SDL_RenderPresent(renderer);
 }

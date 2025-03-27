@@ -556,11 +556,12 @@
 	"SDL2/SDL_mixer.h"
 	"Game.h"
 
-1742997262 c:\game\game.h
+1743086074 c:\game\game.h
 	<vector>
 	<chrono>
 	<memory>
 	"SDL2/SDL.h"
+	"SDL2/SDL_ttf.h"
 	"Unit.h"
 	"Turret.h"
 	"Projectile.h"
@@ -626,9 +627,10 @@
 1742964728 source:c:\game\timer.cpp
 	"Timer.h"
 
-1742997540 source:c:\game\game.cpp
+1743090735 source:c:\game\game.cpp
 	"Game.h"
 	<iostream>
+	<string>
 
 1742972482 source:c:\game\projectile.cpp
 	"Projectile.h"
@@ -651,4 +653,9 @@
 
 1742972494 source:c:\game\level.cpp
 	"Level.h"
+
+1735832789 c:\sdl2\include\sdl2\sdl_ttf.h
+	"SDL.h"
+	"begin_code.h"
+	"close_code.h"
 
