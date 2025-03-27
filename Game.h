@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include "SDL2/SDL.h"
+#include "SDL2/SDL_ttf.h"
 #include "Unit.h"
 #include "Turret.h"
 #include "Projectile.h"
@@ -63,5 +64,7 @@ public:
 private:
     Vector2D basePosition;
     bool running;
+    Uint32 startTime;
+    TTF_Font* font;
 
 };
