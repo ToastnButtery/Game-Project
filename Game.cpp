@@ -194,7 +194,8 @@ if (enemyPos.distanceTo(basePosition) < 0.5f) {  // Nếu kẻ địch đến g�
     baseHealth--;  // Giảm 1 máu căn cứ
     if (baseHealth <= 0) {
         std::cout << "Base Destroyed! Game Over!" << std::endl;
-        running = false;  // Dừng game
+        running = false;
+        return;
     }
     it = listUnits.erase(it);
     increment = false;
