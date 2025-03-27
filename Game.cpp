@@ -7,7 +7,7 @@
 Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight) :
     placementModeCurrent(PlacementMode::wall),
     level(renderer, windowWidth / tileSize, windowHeight / tileSize),
-    spawnTimer(0.25f), roundTimer(5.0f), gameOver(false), endTime(0){
+    spawnTimer(0.25f), roundTimer(5.0f), gameOver(false), endTime(0), windowWidth(windowWidth), windowHeight(windowHeight){
 
         if(TTF_Init()==-1){
             std::cerr<<"Failed to initialize SDL_TTF: " <<TTF_GetError()<<std::endl;
@@ -197,6 +197,8 @@ if (enemyPos.distanceTo(basePosition) < 0.5f) {
         running = false;
         gameOver=true;
         endTime=SDL_GetTicks();
+        Mix_HaltChannel(-1);
+
         return;
     }
     it = listUnits.erase(it);
@@ -259,6 +261,46 @@ void Game::updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT) {
 
 
 void Game::draw(SDL_Renderer* renderer) {
+
+    if(gameOver){
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
+        SDL_Texture* gameOverTexture= TextureLoader::loadTexture(renderer, "Data/Images/GameOverScreen.bmp");
+
+        if(gameOverTexture){
+            int w,h;
+            SDL_QueryTexture(gameOverTexture,NULL,NULL, &w, &h);
+            SDL_Rect dstRect={windowWidth/2-w/2, windowHeight/3,w,h};
+            SDL_RenderCopy(renderer, gameOverTexture, NULL, &dstRect);
+            SDL_DestroyTexture(gameOverTexture);
+        }
+
+        Uint32 elapsedTime = (endTime-startTime)/1000;
+        std::string timeText="Time Survived: " + std::to_string(elapsedTime)+ " s";
+        SDL_Color textColor ={255, 255, 255, 255};
+
+        SDL_Surface* timeSurface =TTF_RenderText_Solid(font, timeText.c_str(), textColor);
+        if( timeSurface){
+            SDL_Texture* timeTexture = SDL_CreateTextureFromSurface(renderer, timeSurface);
+            SDL_Rect timeRect = {windowWidth/2 - timeSurface->w /2, windowHeight/2 -40, timeSurface->w, timeSurface->h};
+            SDL_RenderCopy(renderer, timeTexture, NULL, &timeRect);
+            SDL_FreeSurface(timeSurface);
+            SDL_DestroyTexture(timeTexture);
+        }
+
+        SDL_Surface* textSurface = TTF_RenderText_Solid(font, "Press R to Restart ", textColor);
+        if(textSurface){
+            SDL_Texture*  textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+            SDL_Rect textRect = {windowWidth/2 - textSurface->w/2, windowHeight/2  + 20, textSurface->w, textSurface->h};
+            SDL_RenderCopy(renderer,textTexture, NULL, &textRect);
+            SDL_FreeSurface(textSurface);
+            SDL_DestroyTexture(textTexture);
+        }
+        SDL_RenderPresent(renderer);
+        return;
+
+    }
 
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 

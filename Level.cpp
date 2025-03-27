@@ -49,8 +49,9 @@ void Level::draw(SDL_Renderer* renderer, int tileSize) {
         }
     }
 
-for (int count = 0; count < listTiles.size(); count++)
-        drawTile(renderer, (count % tileCountX), (count / tileCountX), tileSize);
+//If you need to draw the Tile of the Vector, uncomment this function//
+/*for (int count = 0; count < listTiles.size(); count++)
+        drawTile(renderer, (count % tileCountX), (count / tileCountX), tileSize);*/
 
 
     for (int y = 0; y < tileCountY; y++) {

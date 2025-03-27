@@ -16,7 +16,7 @@
 					<Add directory="C:/SDL2/include" />
 				</Compiler>
 				<Linker>
-					<Add option="-lmingw32 -lSDL2main -lSDL2 -lSDL2_mixer" />
+					<Add option="-lmingw32 -lSDL2main -lSDL2 -lSDL2_mixer -lSDL2_ttf" />
 					<Add directory="C:/SDL2/lib" />
 				</Linker>
 			</Target>

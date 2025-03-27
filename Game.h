@@ -67,6 +67,8 @@ private:
     Uint32 startTime;
     Uint32 endTime;
     bool gameOver;
+    int windowWidth;
+    int windowHeight;
     TTF_Font* font;
 
 };
