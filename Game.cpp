@@ -7,7 +7,7 @@
 Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight) :
     placementModeCurrent(PlacementMode::wall),
     level(renderer, windowWidth / tileSize, windowHeight / tileSize),
-    spawnTimer(0.25f), roundTimer(5.0f) {
+    spawnTimer(0.25f), roundTimer(5.0f), gameOver(false), endTime(0){
 
         if(TTF_Init()==-1){
             std::cerr<<"Failed to initialize SDL_TTF: " <<TTF_GetError()<<std::endl;
@@ -190,11 +190,13 @@ void Game::updateUnits(float dT) {
         if ((*it) != nullptr) {
             (*it)->update(dT, level, listUnits);
             Vector2D enemyPos = (*it)->getPos();
-if (enemyPos.distanceTo(basePosition) < 0.5f) {  // Nếu kẻ địch đến gần căn cứ
-    baseHealth--;  // Giảm 1 máu căn cứ
-    if (baseHealth <= 0) {
+if (enemyPos.distanceTo(basePosition) < 0.5f) {
+    baseHealth--;
+    if (baseHealth <= 0 && !gameOver) {
         std::cout << "Base Destroyed! Game Over!" << std::endl;
         running = false;
+        gameOver=true;
+        endTime=SDL_GetTicks();
         return;
     }
     it = listUnits.erase(it);
@@ -296,7 +298,11 @@ SDL_RenderFillRect(renderer, &healthBarBackground);
 SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
 SDL_RenderFillRect(renderer, &healthBar);
 
-Uint32 elapsedTime = (SDL_GetTicks() - startTime)/1000;
+Uint32 elapsedTime;
+if(!gameOver) elapsedTime=(SDL_GetTicks() - startTime)/1000;
+else elapsedTime = (endTime-startTime) /1000;
+
+
 std::string timeText ="Time survived: "+ std::to_string(elapsedTime) + " s";
 
 SDL_Color textColor = {255, 255, 255, 255};

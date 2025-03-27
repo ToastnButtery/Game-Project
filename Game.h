@@ -65,6 +65,8 @@ private:
     Vector2D basePosition;
     bool running;
     Uint32 startTime;
+    Uint32 endTime;
+    bool gameOver;
     TTF_Font* font;
 
 };
