@@ -56,6 +56,8 @@ private:
 private:
     int baseHealth;
     int baseMaxHealth;
+    SDL_Texture* gameOverTexture;
+
 
 public:
     void damageBase(int damage);
@@ -67,8 +69,14 @@ private:
     Uint32 startTime;
     Uint32 endTime;
     bool gameOver;
+    TTF_Font* font;
     int windowWidth;
     int windowHeight;
-    TTF_Font* font;
+    int waveNumber=1;
+    int finalWave=0;
+
+
+
+
 
 };

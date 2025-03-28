@@ -1,30 +1,28 @@
 #include "Game.h"
 #include <iostream>
-#include <string>
+#include "SDL2/SDL_ttf.h"
+#include <sstream>
 
 
 
 Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight) :
     placementModeCurrent(PlacementMode::wall),
     level(renderer, windowWidth / tileSize, windowHeight / tileSize),
-    spawnTimer(0.25f), roundTimer(5.0f), gameOver(false), endTime(0), windowWidth(windowWidth), windowHeight(windowHeight){
+    spawnTimer(0.25f), roundTimer(5.0f),gameOver(false),endTime(0),windowWidth(windowWidth), windowHeight(windowHeight), gameOverTexture(nullptr){
+       running=true;
 
-        if(TTF_Init()==-1){
-            std::cerr<<"Failed to initialize SDL_TTF: " <<TTF_GetError()<<std::endl;
-        }
+       if(TTF_Init()==-1){
+        std::cerr<<" Failed to initialize SDL_TTF: "<<TTF_GetError()<<std::endl;
 
-        startTime=SDL_GetTicks();
+       }
+       startTime=SDL_GetTicks();
 
+      font = TTF_OpenFont("Data/Fonts/fast99.ttf", 24);
+      if (!font) std::cerr << "Failed to load fonts: " << TTF_GetError() << std::endl;
 
-        font=TTF_OpenFont("Data/Fonts/fast99.ttf", 24);
-        if(!font) std::cerr<<"Failed to load fonts : "<<TTF_GetError()<<std::endl;
-
-
-        baseMaxHealth = 10;
-baseHealth = baseMaxHealth;
-basePosition = Vector2D(windowWidth / (2 * tileSize), windowHeight / (2 * tileSize)); // Tâm màn hình
-
-
+        baseMaxHealth=10;
+        baseHealth=baseMaxHealth;
+       basePosition=Vector2D(windowWidth/(2*tileSize), windowHeight/(2*tileSize));
 
     if (window != nullptr && renderer != nullptr) {
 
@@ -33,7 +31,7 @@ basePosition = Vector2D(windowWidth / (2 * tileSize), windowHeight / (2 * tileSi
 
         mix_ChunkSpawnUnit = SoundLoader::loadSound("Spawn Unit.ogg");
 
-
+        //Store the current times for the clock.
         auto time1 = std::chrono::system_clock::now();
         auto time2 = std::chrono::system_clock::now();
 
@@ -48,7 +46,6 @@ basePosition = Vector2D(windowWidth / (2 * tileSize), windowHeight / (2 * tileSi
             time2 = std::chrono::system_clock::now();
             std::chrono::duration<float> timeDelta = time2 - time1;
             float timeDeltaFloat = timeDelta.count();
-
 
             if (timeDeltaFloat >= dT) {
 
@@ -70,7 +67,16 @@ Game::~Game() {
 
     if(font){
         TTF_CloseFont(font);
-        font = nullptr;
+        font=nullptr;
+    }
+    if(mix_ChunkSpawnUnit){
+        Mix_FreeChunk(mix_ChunkSpawnUnit);
+        mix_ChunkSpawnUnit=nullptr;
+    }
+
+    if(gameOverTexture){
+        SDL_DestroyTexture(gameOverTexture);
+        gameOverTexture=nullptr;
     }
     TTF_Quit();
 }
@@ -100,11 +106,15 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
             break;
 
         case SDL_KEYDOWN:
-            if(gameOver&& event.key.keysym.scancode != SDL_SCANCODE_L){
-                break;
-            }
-
             switch (event.key.keysym.scancode) {
+
+            case SDL_SCANCODE_R:
+                resetBase();
+                listUnits.clear();
+                listTurrets.clear();
+                listProjectiles.clear();
+                std::cout<<"Game Restarted!"<<std::endl;
+                break;
 
             case SDL_SCANCODE_ESCAPE:
                 running = false;
@@ -117,22 +127,9 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
             case SDL_SCANCODE_2:
                 placementModeCurrent = PlacementMode::turret;
                 break;
-
-
             case SDL_SCANCODE_H:
                 overlayVisible = !overlayVisible;
                 break;
-                case SDL_SCANCODE_R:
-    resetBase();
-    listUnits.clear();
-    listTurrets.clear();
-    listProjectiles.clear();
-    gameOver=false;
-    startTime=SDL_GetTicks();
-
-    std::cout << "Game restarted!" << std::endl;
-    break;
-
             }
         }
     }
@@ -174,9 +171,9 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
 
 
 void Game::update(SDL_Renderer* renderer, float dT) {
+    if(gameOver) return;
 
     updateUnits(dT);
-
 
     for (auto& turretSelected : listTurrets)
         turretSelected.update(renderer, dT, listUnits, listProjectiles);
@@ -196,20 +193,22 @@ void Game::updateUnits(float dT) {
 
         if ((*it) != nullptr) {
             (*it)->update(dT, level, listUnits);
-            Vector2D enemyPos = (*it)->getPos();
-if (enemyPos.distanceTo(basePosition) < 0.5f) {
-    baseHealth--;
-    if (baseHealth <= 0 && !gameOver) {
-        std::cout << "Base Destroyed! Game Over!" << std::endl;
-        gameOver=true;
-        endTime=SDL_GetTicks();
-        Mix_HaltChannel(-1);
 
-        return;
-    }
-    it = listUnits.erase(it);
-    increment = false;
-}
+        Vector2D enemyPos = (*it)->getPos();
+        if(enemyPos.distanceTo(basePosition)<0.5f){
+            baseHealth--;
+            std::cout << "Base Health: " << baseHealth << std::endl;
+
+            if(baseHealth<=0){
+                std::cout<<"Game Over!"<<std::endl;
+                gameOver=true;
+                endTime=SDL_GetTicks();
+                finalWave=waveNumber;
+                return;
+            }
+            it=listUnits.erase(it);
+            increment=false;
+        }
 
 
             if ((*it)->isAlive() == false) {
@@ -246,7 +245,10 @@ void Game::updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT) {
     if (listUnits.empty() && spawnUnitCount == 0) {
         roundTimer.countDown(dT);
         if (roundTimer.timeSIsZero()) {
-            spawnUnitCount = 15;
+                waveNumber++;
+
+            spawnUnitCount = 15+(waveNumber/5)*5;
+            if(spawnUnitCount>30) spawnUnitCount=30;
             roundTimer.resetToMax();
         }
     }
@@ -264,70 +266,93 @@ void Game::updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT) {
     }
 }
 
-
-
 void Game::draw(SDL_Renderer* renderer) {
-
-    if(gameOver){
+    if (gameOver) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderFillRect(renderer,NULL);
+        SDL_RenderClear(renderer);
 
-        SDL_Texture* gameOverTexture= TextureLoader::loadTexture(renderer, "Data/Images/GameOverScreen.bmp");
+        if (!gameOverTexture) {
+            gameOverTexture = TextureLoader::loadTexture(renderer, "Data/Images/GameOverScreen.bmp");
+            if (!gameOverTexture) {
+                std::cerr << "Failed to load Game Over screen!" << std::endl;
+            }
+        }
 
-        if(gameOverTexture){
-            int w,h;
-            SDL_QueryTexture(gameOverTexture,NULL,NULL, &w, &h);
-            SDL_Rect dstRect={windowWidth/2-w/2, windowHeight/3,w,h};
+        if (gameOverTexture) {
+            int w, h;
+            SDL_QueryTexture(gameOverTexture, NULL, NULL, &w, &h);
+            SDL_Rect dstRect = { windowWidth / 2 - w / 2, windowHeight / 3, w, h };
             SDL_RenderCopy(renderer, gameOverTexture, NULL, &dstRect);
-            SDL_DestroyTexture(gameOverTexture);
         }
 
-        Uint32 elapsedTime = (endTime-startTime)/1000;
-        std::string timeText="Time Survived: " + std::to_string(elapsedTime)+ " s";
-        SDL_Color textColor ={255, 255, 255, 255};
 
-        SDL_Surface* timeSurface =TTF_RenderText_Solid(font, timeText.c_str(), textColor);
-        if( timeSurface){
+        Uint32 elapsedTime = (endTime - startTime) / 1000;
+        std::string timeText = "Time Survived: " + std::to_string(elapsedTime) + " s";
+        SDL_Color textColor = { 255, 255, 255, 255 };
+
+        SDL_Surface* timeSurface = TTF_RenderText_Solid(font, timeText.c_str(), textColor);
+        if (timeSurface) {
             SDL_Texture* timeTexture = SDL_CreateTextureFromSurface(renderer, timeSurface);
-            SDL_Rect timeRect = {windowWidth/2 - timeSurface->w /2, windowHeight/2 -40, timeSurface->w, timeSurface->h};
-            SDL_RenderCopy(renderer, timeTexture, NULL, &timeRect);
+            if (timeTexture) {
+                SDL_Rect timeRect = { windowWidth / 2 - timeSurface->w / 2, windowHeight / 2 - 40, timeSurface->w, timeSurface->h };
+                SDL_RenderCopy(renderer, timeTexture, NULL, &timeRect);
+                SDL_DestroyTexture(timeTexture);
+            } else {
+                std::cerr << "Failed to create texture from surface: " << SDL_GetError() << std::endl;
+            }
             SDL_FreeSurface(timeSurface);
-            SDL_DestroyTexture(timeTexture);
         }
 
-        SDL_Surface* textSurface = TTF_RenderText_Solid(font, "Press R to Restart ", textColor);
-        if(textSurface){
-            SDL_Texture*  textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-            SDL_Rect textRect = {windowWidth/2 - textSurface->w/2, windowHeight/2  + 20, textSurface->w, textSurface->h};
-            SDL_RenderCopy(renderer,textTexture, NULL, &textRect);
-            SDL_FreeSurface(textSurface);
-            SDL_DestroyTexture(textTexture);
+
+        std::string restartText = "Press R to Restart";
+        SDL_Surface* restartSurface = TTF_RenderText_Solid(font, restartText.c_str(), textColor);
+        if (restartSurface) {
+            SDL_Texture* restartTexture = SDL_CreateTextureFromSurface(renderer, restartSurface);
+            if (restartTexture) {
+                SDL_Rect restartRect = { windowWidth / 2 - restartSurface->w / 2, windowHeight / 2, restartSurface->w, restartSurface->h };
+                SDL_RenderCopy(renderer, restartTexture, NULL, &restartRect);
+                SDL_DestroyTexture(restartTexture);
+            } else {
+                std::cerr << "Failed to create restart texture: " << SDL_GetError() << std::endl;
+            }
+            SDL_FreeSurface(restartSurface);
         }
+         std::string waveText = "Wave Reached: " + std::to_string(finalWave);
+        SDL_Surface* waveSurface = TTF_RenderText_Solid(font, waveText.c_str(), textColor);
+        if (waveSurface) {
+            SDL_Texture* waveTexture = SDL_CreateTextureFromSurface(renderer, waveSurface);
+            if (waveTexture) {
+                SDL_Rect waveRect = { windowWidth / 2 - waveSurface->w / 2, windowHeight / 2 + 40, waveSurface->w, waveSurface->h };
+                SDL_RenderCopy(renderer, waveTexture, NULL, &waveRect);
+                SDL_DestroyTexture(waveTexture);
+            } else {
+                std::cerr << "Failed to create wave texture: " << SDL_GetError() << std::endl;
+            }
+            SDL_FreeSurface(waveSurface);
+        }
+
+
+
         SDL_RenderPresent(renderer);
         return;
-
     }
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-
     level.draw(renderer, tileSize);
-
 
     for (auto& unitSelected : listUnits)
         if (unitSelected != nullptr)
             unitSelected->draw(renderer, tileSize);
 
-
     for (auto& turretSelected : listTurrets)
         turretSelected.draw(renderer, tileSize);
 
-
     for (auto& projectileSelected : listProjectiles)
         projectileSelected.draw(renderer, tileSize);
-
 
     if (textureOverlay != nullptr && overlayVisible) {
         int w = 0, h = 0;
@@ -335,36 +360,16 @@ void Game::draw(SDL_Renderer* renderer) {
         SDL_Rect rect = { 40, 40, w, h };
         SDL_RenderCopy(renderer, textureOverlay, NULL, &rect);
     }
-    SDL_Rect healthBarBackground = {40, 10, 200, 20};  // Nền thanh máu
-SDL_Rect healthBar = {40, 10, (int)(200 * ((float)baseHealth / baseMaxHealth)), 20};  // Thanh máu thực tế
-
-// Vẽ nền (màu đỏ - thể hiện mất máu)
-SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-SDL_RenderFillRect(renderer, &healthBarBackground);
-
-// Vẽ thanh máu còn lại (màu xanh)
-SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-SDL_RenderFillRect(renderer, &healthBar);
-
-Uint32 elapsedTime;
-if(!gameOver) elapsedTime=(SDL_GetTicks() - startTime)/1000;
-else elapsedTime = (endTime-startTime) /1000;
 
 
-std::string timeText ="Time survived: "+ std::to_string(elapsedTime) + " s";
+    SDL_Rect healthBarBackground = { 40, 10, 200, 20 };
+    SDL_Rect healthBar = { 40, 10, (int)(200 * ((float)baseHealth / baseMaxHealth)), 20 };
 
-SDL_Color textColor = {255, 255, 255, 255};
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_RenderFillRect(renderer, &healthBarBackground);
 
-SDL_Surface* textSurface =TTF_RenderText_Solid(font, timeText.c_str(), textColor);
-if( textSurface){
-    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-
-    SDL_Rect textRect = {40, 40, textSurface->w, textSurface->h};
-    SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
-
-    SDL_FreeSurface(textSurface);
-    SDL_DestroyTexture(textTexture);
-}
+    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+    SDL_RenderFillRect(renderer, &healthBar);
 
     SDL_RenderPresent(renderer);
 }
@@ -390,14 +395,15 @@ void Game::removeTurretsAtMousePosition(Vector2D posMouse) {
         else
             it++;
     }
-
-
 }
-void Game::resetBase() {
-    baseHealth = baseMaxHealth;  // Khôi phục máu căn cứ về giá trị ban đầu
+
+void Game::resetBase(){
+    baseHealth=baseMaxHealth;
     spawnTimer.resetToMax();
     roundTimer.resetToMax();
     gameOver=false;
     startTime=SDL_GetTicks();
-    std::cout << "Base reset! Health restored to " << baseHealth << std::endl;
+    waveNumber=1;
+    finalWave=0;
+    std::cout<< "Base health reset!"<<std::endl;
 }
