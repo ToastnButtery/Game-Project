@@ -15,7 +15,7 @@ Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int wind
 
         startTime=SDL_GetTicks();
 
-        TTF_Init();
+
         font=TTF_OpenFont("Data/Fonts/fast99.ttf", 24);
         if(!font) std::cerr<<"Failed to load fonts : "<<TTF_GetError()<<std::endl;
 
@@ -100,6 +100,10 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
             break;
 
         case SDL_KEYDOWN:
+            if(gameOver&& event.key.keysym.scancode != SDL_SCANCODE_L){
+                break;
+            }
+
             switch (event.key.keysym.scancode) {
 
             case SDL_SCANCODE_ESCAPE:
@@ -123,6 +127,9 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
     listUnits.clear();
     listTurrets.clear();
     listProjectiles.clear();
+    gameOver=false;
+    startTime=SDL_GetTicks();
+
     std::cout << "Game restarted!" << std::endl;
     break;
 
@@ -194,7 +201,6 @@ if (enemyPos.distanceTo(basePosition) < 0.5f) {
     baseHealth--;
     if (baseHealth <= 0 && !gameOver) {
         std::cout << "Base Destroyed! Game Over!" << std::endl;
-        running = false;
         gameOver=true;
         endTime=SDL_GetTicks();
         Mix_HaltChannel(-1);
@@ -264,7 +270,7 @@ void Game::draw(SDL_Renderer* renderer) {
 
     if(gameOver){
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+        SDL_RenderFillRect(renderer,NULL);
 
         SDL_Texture* gameOverTexture= TextureLoader::loadTexture(renderer, "Data/Images/GameOverScreen.bmp");
 
@@ -330,7 +336,7 @@ void Game::draw(SDL_Renderer* renderer) {
         SDL_RenderCopy(renderer, textureOverlay, NULL, &rect);
     }
     SDL_Rect healthBarBackground = {40, 10, 200, 20};  // Nền thanh máu
-SDL_Rect healthBar = {40, 10, (int)(200 * ((float)baseHealth / 10)), 20};  // Thanh máu thực tế
+SDL_Rect healthBar = {40, 10, (int)(200 * ((float)baseHealth / baseMaxHealth)), 20};  // Thanh máu thực tế
 
 // Vẽ nền (màu đỏ - thể hiện mất máu)
 SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
@@ -389,5 +395,9 @@ void Game::removeTurretsAtMousePosition(Vector2D posMouse) {
 }
 void Game::resetBase() {
     baseHealth = baseMaxHealth;  // Khôi phục máu căn cứ về giá trị ban đầu
+    spawnTimer.resetToMax();
+    roundTimer.resetToMax();
+    gameOver=false;
+    startTime=SDL_GetTicks();
     std::cout << "Base reset! Health restored to " << baseHealth << std::endl;
 }
